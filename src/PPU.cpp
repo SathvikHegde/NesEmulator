@@ -8,7 +8,7 @@ PPU::PPU() {
     memset(tblPattern, 0, sizeof(tblPattern));
     memset(tblPalette, 0, sizeof(tblPalette));
     
-    // Initialize standard NES Palette (RGB format for rendering)
+    // Default Nestopia (Standard YUV-based RGB Palette) - Balanced
     palScreen[0x00] = 0xFF545454; palScreen[0x01] = 0xFF741E00; palScreen[0x02] = 0xFF901008; palScreen[0x03] = 0xFF880030;
     palScreen[0x04] = 0xFF640044; palScreen[0x05] = 0xFF30005C; palScreen[0x06] = 0xFF000454; palScreen[0x07] = 0xFF00183C;
     palScreen[0x08] = 0xFF002C20; palScreen[0x09] = 0xFF003A08; palScreen[0x0A] = 0xFF004000; palScreen[0x0B] = 0xFF003C00;
@@ -276,13 +276,16 @@ void PPU::clock() {
                 bSpriteZeroHitPossible = false;
                 
                 uint8_t nOAMEntry = 0;
-                while (nOAMEntry < 64 && sprite_count < 8) {
+                while (nOAMEntry < 64 && sprite_count <= 8) {
                     int16_t diff = ((int16_t)scanline) - ((int16_t)OAM[nOAMEntry].y);
                     if (diff >= 0 && diff < (control.sprite_size ? 16 : 8)) {
                         if (sprite_count < 8) {
                             if (nOAMEntry == 0) bSpriteZeroHitPossible = true;
                             spriteScanline[sprite_count] = OAM[nOAMEntry];
                             sprite_count++;
+                        } else {
+                            status.sprite_overflow = 1;
+                            break; // Accurately stop evaluating to crash/overflow correctly
                         }
                     }
                     nOAMEntry++;
@@ -308,8 +311,28 @@ void PPU::clock() {
                             | (7 - (scanline - spriteScanline[i].y));
                     }
                 } else {
-                    // 8x16 Sprites - (Ignore For Now / Advanced)
-                    sprite_pattern_addr_lo = 0; 
+                    // 8x16 Sprites
+                    if (!(spriteScanline[i].attribute & 0x80)) { // Normal
+                        if (scanline - spriteScanline[i].y < 8) {
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)  
+                                | ((spriteScanline[i].id & 0xFE) << 4) 
+                                | ((scanline - spriteScanline[i].y) & 0x07);
+                        } else {
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)  
+                                | (((spriteScanline[i].id & 0xFE) + 1) << 4) 
+                                | ((scanline - spriteScanline[i].y) & 0x07);
+                        }
+                    } else { // Flipped vertically
+                        if (scanline - spriteScanline[i].y < 8) {
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)  
+                                | (((spriteScanline[i].id & 0xFE) + 1) << 4) 
+                                | ((7 - (scanline - spriteScanline[i].y)) & 0x07);
+                        } else {
+                            sprite_pattern_addr_lo = ((spriteScanline[i].id & 0x01) << 12)  
+                                | ((spriteScanline[i].id & 0xFE) << 4) 
+                                | ((7 - (scanline - spriteScanline[i].y)) & 0x07);
+                        }
+                    }
                 }
                 
                 sprite_pattern_addr_hi = sprite_pattern_addr_lo + 8;
@@ -381,6 +404,10 @@ void PPU::clock() {
         }
     }
     
+    // Left-Edge Hardware Masking
+    if (!mask.render_background_left && cycle >= 1 && cycle <= 8) bg_pixel = 0;
+    if (!mask.render_sprites_left && cycle >= 1 && cycle <= 8) fg_pixel = 0;
+
     uint8_t final_pixel = 0x00;
     uint8_t final_palette = 0x00;
     

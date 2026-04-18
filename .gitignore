@@ -1,0 +1,49 @@
+# CMake build directories
+/build/
+/out/
+/bin/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Visual Studio / IDEs
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# Copyrighted ROMs & Savestates
+*.nes
+*.fds
+*.unf
+*.sav
+*.st0
+*.st1
+
+# Compiled binaries & objects
+*.exe
+*.dll
+*.lib
+*.so
+*.dylib
+*.a
+*.ilk
+*.pdb
+*.obj
+*.o
+
+# OS specific
+.DS_Store
+Thumbs.db

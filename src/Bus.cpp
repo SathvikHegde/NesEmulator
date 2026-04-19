@@ -17,6 +17,8 @@ void Bus::write(uint16_t addr, uint8_t data) {
     } else if (addr >= 0x2000 && addr <= 0x3FFF) {
         ppu.cpuWrite(addr & 0x0007, data); // Map to 8 PPU registers
     } else if (addr == 0x4014) {
+        // Oh god, a DMA transfer. Hide your children, hide your wives.
+        // It literally stops the entire CPU just to blast 256 bytes into the PPU.
         dma_page = data;
         dma_addr = 0x00;
         dma_transfer = true;
@@ -70,6 +72,9 @@ void Bus::clock() {
 
     if (nSystemClockCounter % 3 == 0) {
         if (dma_transfer) {
+            // The DMA hijack. 
+            // Why the hell are we waiting for an EVEN clock cycle just to start loading?
+            // Because the spec told me to. I am dead inside.
             if (dma_dummy) {
                 if (nSystemClockCounter % 2 == 1) {
                     dma_dummy = false;

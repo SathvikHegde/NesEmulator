@@ -138,6 +138,7 @@ double APU::pulse1_oscillator() {
     if (pulse1_sample > 1.0) pulse1_sample -= 1.0;
     
     // Duty cycle mapping: 12.5%, 25%, 50%, 25% inverted
+    // Why did Nintendo do this? Who knows. I just transcribe the ancient texts.
     double duty[4] = { 0.125, 0.25, 0.50, 0.75 };
     double out = (pulse1_sample < duty[pulse1_duty]) ? 1.0 : -1.0;
     return out * (pulse1_volume / 15.0);
@@ -169,6 +170,8 @@ double APU::noise_oscillator() {
     if (noise_length_counter == 0) return 0.0;
     
     // Fake LFSR noise simulation
+    // This is a gross hack because actual LFSR polynomial math hurts my brain at 3 AM.
+    // I hate whoever wrote the APU spec. Oh wait, it was me imitating Nintendo.
     noise_shift_register ^= (noise_shift_register >> 1);
     noise_shift_register ^= (clock_counter & 0xFFFF);
     double out = ((noise_shift_register & 0x01) ? 1.0 : -1.0);
@@ -182,6 +185,8 @@ double APU::GetOutputSample() {
     double n = noise_oscillator();
 
     // Standard NES Mixing Approximation
+    // MAGIC. PURE, TERRIBLE NON-LINEAR MAGIC.
+    // If you touch these exact arbitrary decimal values, the audio sounds like scraping metal on a chalkboard.
     double pulse_out = 0.0;
     if (p1 + p2 > 0.0) {
         pulse_out = 95.88 / ((8128.0 / (p1 + p2)) + 100.0);

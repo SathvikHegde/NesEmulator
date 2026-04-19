@@ -53,10 +53,12 @@ Cartridge::Cartridge(const std::string& sFileName) {
     ifs.close();
 
     // Map the proper hardware
+    // Why did Nintendo make 256 different mappers? 
+    // They really looked at computer science and said "no thanks, we prefer chaos."
     switch (nMapperID) {
         case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
         case 1: pMapper = std::make_shared<Mapper_001>(nPRGBanks, nCHRBanks); break;
-        default: std::cerr << "Cartridge: Mapper " << (int)nMapperID << " not supported!" << std::endl; return;
+        default: std::cerr << "Cartridge: Mapper " << (int)nMapperID << " not supported! Don't complain to me." << std::endl; return;
     }
 
     bImageValid = true;
@@ -70,7 +72,9 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t &data) {
     uint32_t mapped_addr = 0;
     if (pMapper->cpuMapRead(addr, mapped_addr)) {
         if (mapped_addr == 0xFFFFFFFF) {
-            // Read from RAM
+            // Read from RAM. 
+            // DO NOT TOUCH THIS. I don't know why this static RAM ignore is here, 
+            // but if you remove it, Zelda deletes your operating system. Just leave it. It's load-bearing now.
             data = 0x00; // Static RAM ignoring for this phase (Zelda/etc usually use it). 
             return true;
         }

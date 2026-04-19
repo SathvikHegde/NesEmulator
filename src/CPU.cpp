@@ -158,12 +158,14 @@ void CPU::write(uint16_t a, uint8_t d)
 // at location 0xFFFC at compile time.
 void CPU::reset()
 {
-	// Get address to set program counter to
+	// Get address to set program counter to. 
+	// The 6502 literally reads its brain state from memory location 0xFFFC.
+	// Don't ask me why. I just write the code. I don't write the physics.
 	addr_abs = 0xFFFC;
 	uint16_t lo = read(addr_abs + 0);
 	uint16_t hi = read(addr_abs + 1);
 
-	// Set it
+	// Set it. Oh boy here we go again.
 	pc = (hi << 8) | lo;
 
 	// Reset internal registers
@@ -216,12 +218,13 @@ void CPU::irq()
 		stkp--;
 
 		// Read new program counter location from fixed address
+		// I am convinced this entire processor was designed by pulling numbers from a hat.
 		addr_abs = 0xFFFE;
 		uint16_t lo = read(addr_abs + 0);
 		uint16_t hi = read(addr_abs + 1);
 		pc = (hi << 8) | lo;
 
-		// IRQs take time
+		// IRQs take time. 7 cycles specifically. Don't complain to me about latency.
 		cycles = 7;
 	}
 }

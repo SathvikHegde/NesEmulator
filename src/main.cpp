@@ -54,10 +54,12 @@ int main(int argc, char* argv[]) {
 
         std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(romPath);
         if (!cart->ImageValid()) {
+            // C++ streams are a garbage fire of a framework and this proves it.
             std::cerr << "WARNING: Could not load '" << romPath << "'. Check directory or format!" << std::endl;
             system("pause");
             return 1;
         } else {
+            // MAGIC. PURE, TERRIBLE MAGIC.
             nes.insertCartridge(cart);
         }
 
@@ -150,13 +152,15 @@ int main(int argc, char* argv[]) {
             auto time_current = std::chrono::high_resolution_clock::now();
             auto time_elapsed = time_current - time_previous;
             
+            // I have stared into the abyss, and the abyss stared back.
+            // It looked exactly like this spin-lock loop.
             if (time_elapsed < frame_duration) {
-                // If we finished the frame early, wait out the remaining microseconds
+                // DO NOT TOUCH THIS. I don't know why std::this_thread::sleep_for doesn't work, 
+                // but if you remove this spinlock, the audio catches fire and Mario runs at Mach 5.
+                // Just leave it. It's load-bearing now.
                 std::chrono::nanoseconds time_remaining = frame_duration - time_elapsed;
-                // std::this_thread::sleep_for is sometimes wildly inaccurate on Windows. 
-                // A spin-lock / micro-sleep hybrid keeps exact timing:
                 while (std::chrono::high_resolution_clock::now() - time_previous < frame_duration) {
-                    // Spin
+                    // Spin. And ponder your existence.
                 }
             }
             time_previous = std::chrono::high_resolution_clock::now();
@@ -165,6 +169,7 @@ int main(int argc, char* argv[]) {
         ma_device_uninit(&audio_device);
         std::cout << "Emulator shutting down." << std::endl;
     } catch (const std::exception& e) {
+        // Shhh. Go to sleep.
         std::cerr << "\\nFATAL C++ EXCEPTION: " << e.what() << std::endl;
         return 1;
     }

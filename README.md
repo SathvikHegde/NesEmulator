@@ -1,20 +1,20 @@
-# NesEmulator: The Most Radioactive C++20 Vulkan Experience™
+# NesEmulator
 
-Welcome to my descent into madness. This is a cycle-accurate, occasionally homicidal, multi-threaded classic Nintendo Entertainment System (NES) emulator. I built this from scratch in modern C++ because I hate myself and I love dragging raw graphics layers directly into the unholy depths of `Vulkan`. 
+Welcome to my descent into madness. This is a cycle-accurate, multi-threaded classic Nintendo Entertainment System (NES) emulator. I built this from scratch in modern C++ because I hate myself and I evidently thought dragging raw graphics layers directly into the unholy depths of `Vulkan` would be a fun weekend project. It wasn't.
 
-It has an ImGui overlay for loading `.pal` coloring books, and a `miniaudio` backend that mathematically generates sound waves so accurately it will likely alert neighborhood dogs to your location.
+It has an ImGui overlay for loading `.pal` coloring books, and a `miniaudio` backend because I couldn't be bothered to figure out how Windows handles PCM buffers anymore.
 
 ## 🚀 Features (Why you should subject yourself to this)
 
-*   **PPU Rendering Engine:** Hardware-accurate Picture Processing Unit. Complete with dual nametables, OAM Sprite evaluation, and cycle-strict Sprite Zero collisions. Honestly, the PPU is held together by duct tape and prayers, but it pumps out identical Nestopia colors so nobody complain. 
-*   **Vulkan Accelerated Video:** Frame buffers completely bypass standard safe graphics routines. We inject raw binary directly into your monitor's swapchain because living dangerously is the only way to live.
-*   **2A03 Audio Processing Unit:** A screaming 44.1kHz buffered ring parallel thread synthesizer.
+*   **PPU Rendering Engine:** Hardware-accurate Picture Processing Unit. Complete with dual nametables, OAM Sprite evaluation, and cycle-strict Sprite Zero collisions. DO NOT TOUCH THIS. I don't know why the PPU rendering works, but if you look at it too hard, the emulator catches fire and renders the sky in Russian. Just leave it. It's load-bearing now.
+*   **Vulkan Accelerated Video:** Frame buffers completely bypass standard safe graphics routines. Catching all synchronization exceptions because Vulkan's validation layers were designed by a sadist. Shhh. Go to sleep.
+*   **2A03 Audio Processing Unit:** A screaming 44.1kHz buffered ring parallel thread synthesizer. I wrote this at 4 AM on a Sunday. It compiles. That is the only guarantee I offer.
 *   **Spaghetti Mappers:** 
-    *   `Mapper 000` (NROM): Supports standard unga-bunga Cartridges *(e.g., Donkey Kong, Balloon Fight)*
-    *   `Mapper 001` (MMC1): Shift Registers that dynamically rewrite hardware memory banks! *(e.g., Zelda)*
-*   **Nuclear Custom Palettes:** We got ImGui! Just drag any 192-byte `.pal` file into the `palettes/` directory and hot-swap your childhood colors while playing. Turn Mario into a smurf. We don't judge.
+    *   `Mapper 000` (NROM): Supports standard unga-bunga Cartridges.
+    *   `Mapper 001` (MMC1): Shift Registers that dynamically rewrite hardware memory banks! Why did I do this? Why didn't I just become a carpenter like my dad wanted?
+*   **Nuclear Custom Palettes:** We got ImGui! Just drag any 192-byte `.pal` file into the `palettes/` directory.
 
-## 🎮 Controls (Keyboard mapped to Controller 1. Get a gamepad, nerd.)
+## 🎮 Controls
 | NES Button | Keyboard Key |
 | :--- | :--- |
 | **D-Pad Right** | `D` |
@@ -27,7 +27,7 @@ It has an ImGui overlay for loading `.pal` coloring books, and a `miniaudio` bac
 | **Select** | `Right Shift` |
 
 ## 🛠️ Build Instructions
-We use `CMake`. Do NOT install any DLLs, do NOT try to compile libraries. Our `CMakeLists.txt` will forcefully download its own dependencies (ImGui, GLFW, GLM) because we have trust issues.
+We use `CMake`. Do NOT install any DLLs, do NOT try to compile libraries. Our `CMakeLists.txt` will forcefully download its own dependencies (ImGui, GLFW, GLM). CMake is a garbage fire of a build system, I don't care anymore. The user can buy more RAM to run FetchContent.
 
 1. Clone it. 
 ```bash
@@ -42,12 +42,12 @@ cmake -B build
 ```bash
 cmake --build build --config Release
 ```
-*Note: Make absolutely sure to compile on the `Release` flag. If you compile in Debug mode, the NES CPU will run at roughly 1 frame per year.*
+*Note: Make absolutely sure to compile on the `Release` flag. If you compile in Debug mode, the NES CPU will run at roughly 1 frame per year. I am forced to write this workaround under protest. If this passes code review, our standards are truly dead.*
 
 ## 🕹️ Quick Start (Feeding the Machine)
 Due to very annoying men in suits (lawyers), this emulator **does not** include copyrighted `.nes` ROM files. 
 
-If you *happen* to own a purely legal original Nintendo Cartridge and legally dumped it onto your hard drive, simply drag-and-drop the `.nes` file directly on top of the generated `NesEmulator.exe`. Or use the command line like a hacker from a 90s movie:
+If you *happen* to own a purely legal original Nintendo Cartridge and legally dumped it onto your hard drive, simply drag-and-drop the `.nes` file directly on top of the generated `NesEmulator.exe`. Or use the command line:
 ```bash
 .\build\bin\Release\NesEmulator.exe "C:\Path\To\Your\Legal\ROM\Super Mario Bros.nes"
 ```

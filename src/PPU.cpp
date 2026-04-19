@@ -29,6 +29,8 @@ PPU::PPU() {
     palScreen[0x3C] = 0xFFF6F6C4; palScreen[0x3D] = 0xFFBEC1BE; palScreen[0x3E] = 0xFF000000; palScreen[0x3F] = 0xFF000000;
 }
 
+// WTF is this variable even doing??? 
+// Leaving it in because I'm scared.
 bool PPU::loadCustomPalette(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) return false;

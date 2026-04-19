@@ -144,77 +144,117 @@ int main(int argc, char* argv[]) {
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Emulator Menu");
+            bool showRoms = false;
+            bool showVideo = false;
+            bool showControls = false;
+            bool openRoms = false;
+            bool openVideo = false;
+            bool openControls = false;
 
-            if (ImGui::BeginTabBar("MenuTabs")) {
-                if (ImGui::BeginTabItem("ROMs")) {
-                    if (ImGui::Button("Refresh Discovered ROMs")) {
-                        romFiles.clear();
-                        if (std::filesystem::exists(romDir) && std::filesystem::is_directory(romDir)) {
-                            for (const auto& entry : std::filesystem::directory_iterator(romDir)) {
-                                if (entry.path().extension() == ".nes") {
-                                    romFiles.push_back(entry.path().filename().string());
-                                }
-                            }
-                        }
-                    }
-                    ImGui::Separator();
-                    
-                    if (ImGui::BeginListBox("##romsList", ImVec2(-FLT_MIN, 15 * ImGui::GetTextLineHeightWithSpacing()))) {
-                        for (int i = 0; i < romFiles.size(); i++) {
-                            if (ImGui::Selectable(romFiles[i].c_str())) {
-                                std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(romDir + "/" + romFiles[i]);
-                                if (cart->ImageValid()) {
-                                    nes.insertCartridge(cart);
-                                    nes.reset();
-                                    emulator_running = true;
-                                }
-                            }
-                        }
-                        ImGui::EndListBox();
-                    }
-                    ImGui::EndTabItem();
+            if (ImGui::BeginMainMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    if (ImGui::MenuItem("Load ROM...")) openRoms = true;
+                    if (ImGui::MenuItem("Exit")) glfwSetWindowShouldClose(renderer.window, GLFW_TRUE);
+                    ImGui::EndMenu();
                 }
-
-                if (ImGui::BeginTabItem("Video")) {
-                    ImGui::Text("Color Palette:");
-                    if (ImGui::BeginCombo("##palette", selectedPal >= 0 ? palFiles[selectedPal].c_str() : "Default (FBX Smooth)")) {
-                        for (int i = 0; i < palFiles.size(); i++) {
-                            bool is_selected = (selectedPal == i);
-                            if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
-                                selectedPal = i;
-                                nes.ppu.loadCustomPalette(palDir + "/" + palFiles[i]);
-                            }
-                            if (is_selected) ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::EndTabItem();
+                if (ImGui::BeginMenu("Options")) {
+                    if (ImGui::MenuItem("Video Settings...")) openVideo = true;
+                    if (ImGui::MenuItem("Controls...")) openControls = true;
+                    ImGui::EndMenu();
                 }
-
-                if (ImGui::BeginTabItem("Controls")) {
-                    ImGui::Text("Click a button then press any key to bind:");
-                    ImGui::Separator();
-                    for (int i = 0; i < 8; i++) {
-                        ImGui::Text("%s", keybindNames[i]);
-                        ImGui::SameLine(100);
-                        
-                        std::string btnLabel = awaiting_key_bind_index == i ? "PRESS A KEY" : std::to_string(keybinds[i]);
-                        btnLabel += "##key" + std::to_string(i);
-                        
-                        if (ImGui::Button(btnLabel.c_str(), ImVec2(150, 0))) {
-                            awaiting_key_bind_index = i;
+                if (ImGui::BeginMenu("View")) {
+                    if (ImGui::MenuItem("Toggle Fullscreen")) {
+                        renderer.isFullScreen = !renderer.isFullScreen;
+                        if (renderer.isFullScreen) {
+                            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+                            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                            glfwSetWindowMonitor(renderer.window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+                        } else {
+                            glfwSetWindowMonitor(renderer.window, nullptr, 100, 100, 800, 600, 0);
                         }
                     }
-                    ImGui::EndTabItem();
+                    ImGui::EndMenu();
                 }
-                
-                ImGui::EndTabBar();
+                ImGui::EndMainMenuBar();
             }
 
-            ImGui::End();
+            if (openRoms) ImGui::OpenPopup("Load ROM");
+            if (openVideo) ImGui::OpenPopup("Video Settings");
+            if (openControls) ImGui::OpenPopup("Controls");
+
+            if (ImGui::BeginPopupModal("Load ROM", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                if (ImGui::Button("Refresh Discovered ROMs")) {
+                    romFiles.clear();
+                    if (std::filesystem::exists(romDir) && std::filesystem::is_directory(romDir)) {
+                        for (const auto& entry : std::filesystem::directory_iterator(romDir)) {
+                            if (entry.path().extension() == ".nes") {
+                                romFiles.push_back(entry.path().filename().string());
+                            }
+                        }
+                    }
+                }
+                ImGui::Separator();
+                
+                if (ImGui::BeginListBox("##romsList", ImVec2(300, 15 * ImGui::GetTextLineHeightWithSpacing()))) {
+                    for (int i = 0; i < romFiles.size(); i++) {
+                        if (ImGui::Selectable(romFiles[i].c_str())) {
+                            std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(romDir + "/" + romFiles[i]);
+                            if (cart->ImageValid()) {
+                                nes.insertCartridge(cart);
+                                nes.reset();
+                                emulator_running = true;
+                                ImGui::CloseCurrentPopup();
+                            }
+                        }
+                    }
+                    ImGui::EndListBox();
+                }
+                ImGui::Separator();
+                if (ImGui::Button("Close", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::BeginPopupModal("Video Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Aspect Ratio:");
+                if (ImGui::RadioButton("Pixel Perfect (256:240)", &renderer.aspectRatioMode, 0)) {}
+                if (ImGui::RadioButton("Authentic NTSC (4:3)", &renderer.aspectRatioMode, 1)) {}
+                
+                ImGui::Separator();
+                ImGui::Text("Color Palette:");
+                if (ImGui::BeginCombo("##palette", selectedPal >= 0 ? palFiles[selectedPal].c_str() : "Default (FBX Smooth)")) {
+                    for (int i = 0; i < palFiles.size(); i++) {
+                        bool is_selected = (selectedPal == i);
+                        if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
+                            selectedPal = i;
+                            nes.ppu.loadCustomPalette(palDir + "/" + palFiles[i]);
+                        }
+                        if (is_selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::Separator();
+                if (ImGui::Button("Close", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::BeginPopupModal("Controls", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Click a button then press any key to bind:");
+                ImGui::Separator();
+                for (int i = 0; i < 8; i++) {
+                    ImGui::Text("%s", keybindNames[i]);
+                    ImGui::SameLine(100);
+                    
+                    std::string btnLabel = awaiting_key_bind_index == i ? "PRESS A KEY" : std::to_string(keybinds[i]);
+                    btnLabel += "##key" + std::to_string(i);
+                    
+                    if (ImGui::Button(btnLabel.c_str(), ImVec2(150, 0))) {
+                        awaiting_key_bind_index = i;
+                    }
+                }
+                ImGui::Separator();
+                if (ImGui::Button("Close", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
 
             ImGui::Render();
             renderer.drawFrame();

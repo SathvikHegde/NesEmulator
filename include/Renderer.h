@@ -60,6 +60,9 @@ public:
     bool getKey(int key) { return glfwGetKey(window, key) == GLFW_PRESS; }
 
     GLFWwindow* window;
+    bool framebufferResized = false;
+    int aspectRatioMode = 0; // 0 = Pixel Perfect (256:240), 1 = Standard TV (4:3)
+    bool isFullScreen = false;
 
 private:
     const uint32_t TEX_WIDTH = 256;
@@ -116,6 +119,8 @@ private:
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createSwapChain();
+    void cleanupSwapChain();
+    void recreateSwapChain();
     void createImageViews();
     void createRenderPass();
     void createDescriptorSetLayout();
@@ -150,6 +155,8 @@ private:
     bool checkDeviceExtensionSupport(VkPhysicalDevice d);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice d);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice d);
+
+    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);

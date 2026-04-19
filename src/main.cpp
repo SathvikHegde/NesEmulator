@@ -43,27 +43,24 @@ int main(int argc, char* argv[]) {
 
         Bus nes;
         
-        std::string romPath = "nestest.nes";
+        std::string customRom = "";
         if (argc > 1) {
-            romPath = "";
             for (int i = 1; i < argc; i++) {
-                romPath += argv[i];
-                if (i != argc - 1) romPath += " ";
+                customRom += argv[i];
+                if (i != argc - 1) customRom += " ";
             }
         }
 
-        std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(romPath);
-        if (!cart->ImageValid()) {
-            // C++ streams are a garbage fire of a framework and this proves it.
-            std::cerr << "WARNING: Could not load '" << romPath << "'. Check directory or format!" << std::endl;
-            system("pause");
-            return 1;
-        } else {
-            // MAGIC. PURE, TERRIBLE MAGIC.
-            nes.insertCartridge(cart);
+        bool emulator_running = false;
+        
+        if (!customRom.empty()) {
+            std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(customRom);
+            if (cart->ImageValid()) {
+                nes.insertCartridge(cart);
+                nes.reset();
+                emulator_running = true;
+            }
         }
-
-        nes.reset(); // Give the CPU a little electric shock to wake it up!
 
         std::cout << "Booting Vulkan Renderer..." << std::endl;
         Renderer renderer;
@@ -85,42 +82,61 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Starting Emulator Loop!" << std::endl;
         
-        // Scan for .pal files in the 'palettes' directory. Because why not? We love coloring books!
         std::vector<std::string> palFiles;
         std::string palDir = "palettes";
         if (std::filesystem::exists(palDir) && std::filesystem::is_directory(palDir)) {
             for (const auto& entry : std::filesystem::directory_iterator(palDir)) {
                 if (entry.path().extension() == ".pal") {
-                    palFiles.push_back(entry.path().filename().string()); // Steal their identity
+                    palFiles.push_back(entry.path().filename().string());
                 }
             }
         }
         int selectedPal = -1;
 
-        // NES NTSC frame duration = ~16.639 milliseconds
+        std::vector<std::string> romFiles;
+        std::string romDir = "roms";
+        if (std::filesystem::exists(romDir) && std::filesystem::is_directory(romDir)) {
+            for (const auto& entry : std::filesystem::directory_iterator(romDir)) {
+                if (entry.path().extension() == ".nes") {
+                    romFiles.push_back(entry.path().filename().string());
+                }
+            }
+        }
+
+        // A, B, Select, Start, Up, Down, Left, Right
+        int keybinds[8] = { GLFW_KEY_X, GLFW_KEY_Z, GLFW_KEY_RIGHT_SHIFT, GLFW_KEY_ENTER, GLFW_KEY_W, GLFW_KEY_S, GLFW_KEY_A, GLFW_KEY_D };
+        const char* keybindNames[8] = { "A", "B", "Select", "Start", "Up", "Down", "Left", "Right" };
+        int awaiting_key_bind_index = -1;
+
         const std::chrono::nanoseconds frame_duration(16639267);
         auto time_previous = std::chrono::high_resolution_clock::now();
 
         while (!renderer.shouldClose()) {
             glfwPollEvents();
 
-            // Handle Input Mapping
-            // A, B, Select, Start, Up, Down, Left, Right
-            nes.controller[0] = 0x00;
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_X) ? 0x80 : 0x00; // A
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_Z) ? 0x40 : 0x00; // B
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_RIGHT_SHIFT) ? 0x20 : 0x00; // Select
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_ENTER) ? 0x10 : 0x00; // Start
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_W) ? 0x08 : 0x00; // Up
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_S) ? 0x04 : 0x00; // Down
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_A) ? 0x02 : 0x00; // Left
-            nes.controller[0] |= renderer.getKey(GLFW_KEY_D) ? 0x01 : 0x00; // Right
+            if (awaiting_key_bind_index != -1) {
+                // Poll all standard GLFW keys
+                for (int k = 32; k <= 348; k++) {
+                    if (glfwGetKey(renderer.window, k) == GLFW_PRESS) {
+                        keybinds[awaiting_key_bind_index] = k;
+                        awaiting_key_bind_index = -1;
+                        break;
+                    }
+                }
+            }
 
-            do {
-                nes.clock();
-            } while (!nes.ppu.frame_complete);
+            if (emulator_running && awaiting_key_bind_index == -1) {
+                nes.controller[0] = 0x00;
+                for (int i = 0; i < 8; i++) {
+                    nes.controller[0] |= renderer.getKey(keybinds[i]) ? (0x80 >> i) : 0x00;
+                }
 
-            nes.ppu.frame_complete = false;
+                do {
+                    nes.clock();
+                } while (!nes.ppu.frame_complete);
+
+                nes.ppu.frame_complete = false;
+            }
 
             renderer.updateTexture(nes.ppu.screen);
 
@@ -128,21 +144,76 @@ int main(int argc, char* argv[]) {
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            ImGui::Begin("Emulator Settings");
-            ImGui::Text("Color Palette:");
-            if (ImGui::BeginCombo("##palette", selectedPal >= 0 ? palFiles[selectedPal].c_str() : "Default (FBX Smooth)")) {
-                for (int i = 0; i < palFiles.size(); i++) {
-                    bool is_selected = (selectedPal == i);
-                    if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
-                        selectedPal = i;
-                        // Time to inject some fresh radioactive colors into the PPU...
-                        std::string fullPath = palDir + "/" + palFiles[i];
-                        nes.ppu.loadCustomPalette(fullPath);
+            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Emulator Menu");
+
+            if (ImGui::BeginTabBar("MenuTabs")) {
+                if (ImGui::BeginTabItem("ROMs")) {
+                    if (ImGui::Button("Refresh Discovered ROMs")) {
+                        romFiles.clear();
+                        if (std::filesystem::exists(romDir) && std::filesystem::is_directory(romDir)) {
+                            for (const auto& entry : std::filesystem::directory_iterator(romDir)) {
+                                if (entry.path().extension() == ".nes") {
+                                    romFiles.push_back(entry.path().filename().string());
+                                }
+                            }
+                        }
                     }
-                    if (is_selected) ImGui::SetItemDefaultFocus();
+                    ImGui::Separator();
+                    
+                    if (ImGui::BeginListBox("##romsList", ImVec2(-FLT_MIN, 15 * ImGui::GetTextLineHeightWithSpacing()))) {
+                        for (int i = 0; i < romFiles.size(); i++) {
+                            if (ImGui::Selectable(romFiles[i].c_str())) {
+                                std::shared_ptr<Cartridge> cart = std::make_shared<Cartridge>(romDir + "/" + romFiles[i]);
+                                if (cart->ImageValid()) {
+                                    nes.insertCartridge(cart);
+                                    nes.reset();
+                                    emulator_running = true;
+                                }
+                            }
+                        }
+                        ImGui::EndListBox();
+                    }
+                    ImGui::EndTabItem();
                 }
-                ImGui::EndCombo();
+
+                if (ImGui::BeginTabItem("Video")) {
+                    ImGui::Text("Color Palette:");
+                    if (ImGui::BeginCombo("##palette", selectedPal >= 0 ? palFiles[selectedPal].c_str() : "Default (FBX Smooth)")) {
+                        for (int i = 0; i < palFiles.size(); i++) {
+                            bool is_selected = (selectedPal == i);
+                            if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
+                                selectedPal = i;
+                                nes.ppu.loadCustomPalette(palDir + "/" + palFiles[i]);
+                            }
+                            if (is_selected) ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Controls")) {
+                    ImGui::Text("Click a button then press any key to bind:");
+                    ImGui::Separator();
+                    for (int i = 0; i < 8; i++) {
+                        ImGui::Text("%s", keybindNames[i]);
+                        ImGui::SameLine(100);
+                        
+                        std::string btnLabel = awaiting_key_bind_index == i ? "PRESS A KEY" : std::to_string(keybinds[i]);
+                        btnLabel += "##key" + std::to_string(i);
+                        
+                        if (ImGui::Button(btnLabel.c_str(), ImVec2(150, 0))) {
+                            awaiting_key_bind_index = i;
+                        }
+                    }
+                    ImGui::EndTabItem();
+                }
+                
+                ImGui::EndTabBar();
             }
+
             ImGui::End();
 
             ImGui::Render();

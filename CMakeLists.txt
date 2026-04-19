@@ -82,6 +82,7 @@ endif()
 add_custom_command(
     TARGET NesEmulator POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:NesEmulator>/shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/palettes $<TARGET_FILE_DIR:NesEmulator>/palettes
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/nestest.nes $<TARGET_FILE_DIR:NesEmulator>/nestest.nes
     COMMENT "Copying assets to executable directory"
 )

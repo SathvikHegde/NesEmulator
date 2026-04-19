@@ -59,6 +59,7 @@ void Renderer::initWindow() {
 }
 
 void Renderer::initVulkan() {
+    // Summon the Vulkan demons. May God have mercy on our VRAM.
     createInstance();
     createSurface();
     pickPhysicalDevice();
@@ -140,11 +141,11 @@ void Renderer::drawFrame() {
 }
 
 void Renderer::cleanup() {
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(device); // Tell the GPU to go to sleep. Shhh.
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    ImGui::DestroyContext(); // Nuke the UI from orbit. It's the only way to be sure.
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);

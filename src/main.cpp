@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
             nes.insertCartridge(cart);
         }
 
-        nes.reset();
+        nes.reset(); // Give the CPU a little electric shock to wake it up!
 
         std::cout << "Booting Vulkan Renderer..." << std::endl;
         Renderer renderer;
@@ -83,11 +83,14 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Starting Emulator Loop!" << std::endl;
         
-        // Scan for .pal files in the current directory
+        // Scan for .pal files in the 'palettes' directory. Because why not? We love coloring books!
         std::vector<std::string> palFiles;
-        for (const auto& entry : std::filesystem::directory_iterator(".")) {
-            if (entry.path().extension() == ".pal") {
-                palFiles.push_back(entry.path().filename().string());
+        std::string palDir = "palettes";
+        if (std::filesystem::exists(palDir) && std::filesystem::is_directory(palDir)) {
+            for (const auto& entry : std::filesystem::directory_iterator(palDir)) {
+                if (entry.path().extension() == ".pal") {
+                    palFiles.push_back(entry.path().filename().string()); // Steal their identity
+                }
             }
         }
         int selectedPal = -1;
@@ -130,7 +133,9 @@ int main(int argc, char* argv[]) {
                     bool is_selected = (selectedPal == i);
                     if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
                         selectedPal = i;
-                        nes.ppu.loadCustomPalette(palFiles[i]);
+                        // Time to inject some fresh radioactive colors into the PPU...
+                        std::string fullPath = palDir + "/" + palFiles[i];
+                        nes.ppu.loadCustomPalette(fullPath);
                     }
                     if (is_selected) ImGui::SetItemDefaultFocus();
                 }

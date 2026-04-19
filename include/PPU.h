@@ -18,6 +18,8 @@ public:
 
     void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 
+    bool loadCustomPalette(const std::string& path);
+
     void clock();
 
     // Memory arrays

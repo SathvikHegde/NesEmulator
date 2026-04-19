@@ -2,6 +2,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 #include <vector>
 #include <string>
 #include <optional>
@@ -101,8 +104,11 @@ private:
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
 
+    VkDescriptorPool imguiPool;
+
     void initWindow();
     void initVulkan();
+    void initImGui();
     void cleanup();
 
     void createInstance();

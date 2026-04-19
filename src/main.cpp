@@ -10,6 +10,11 @@
 #include <mutex>
 #include <queue>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+#include <filesystem>
+
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
@@ -78,6 +83,15 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Starting Emulator Loop!" << std::endl;
         
+        // Scan for .pal files in the current directory
+        std::vector<std::string> palFiles;
+        for (const auto& entry : std::filesystem::directory_iterator(".")) {
+            if (entry.path().extension() == ".pal") {
+                palFiles.push_back(entry.path().filename().string());
+            }
+        }
+        int selectedPal = -1;
+
         // NES NTSC frame duration = ~16.639 milliseconds
         const std::chrono::nanoseconds frame_duration(16639267);
         auto time_previous = std::chrono::high_resolution_clock::now();
@@ -104,6 +118,27 @@ int main(int argc, char* argv[]) {
             nes.ppu.frame_complete = false;
 
             renderer.updateTexture(nes.ppu.screen);
+
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            ImGui::Begin("Emulator Settings");
+            ImGui::Text("Color Palette:");
+            if (ImGui::BeginCombo("##palette", selectedPal >= 0 ? palFiles[selectedPal].c_str() : "Default (FBX Smooth)")) {
+                for (int i = 0; i < palFiles.size(); i++) {
+                    bool is_selected = (selectedPal == i);
+                    if (ImGui::Selectable(palFiles[i].c_str(), is_selected)) {
+                        selectedPal = i;
+                        nes.ppu.loadCustomPalette(palFiles[i]);
+                    }
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::End();
+
+            ImGui::Render();
             renderer.drawFrame();
 
             // Software Frame Limiter

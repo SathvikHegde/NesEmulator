@@ -1,6 +1,8 @@
 #include "PPU.h"
 #include <cstring>
 #include <cstdlib>
+#include <fstream>
+#include <iostream>
 
 PPU::PPU() {
     memset(screen, 0, sizeof(screen));
@@ -25,6 +27,29 @@ PPU::PPU() {
     palScreen[0x34] = 0xFFFED7F8; palScreen[0x35] = 0xFFF5D6FC; palScreen[0x36] = 0xFFCFDBFD; palScreen[0x37] = 0xFFB5E7F9;
     palScreen[0x38] = 0xFFAAF0F1; palScreen[0x39] = 0xFFA9FADA; palScreen[0x3A] = 0xFFBCFFC9; palScreen[0x3B] = 0xFFD7FBC3;
     palScreen[0x3C] = 0xFFF6F6C4; palScreen[0x3D] = 0xFFBEC1BE; palScreen[0x3E] = 0xFF000000; palScreen[0x3F] = 0xFF000000;
+}
+
+bool PPU::loadCustomPalette(const std::string& path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) return false;
+    
+    uint8_t buffer[192];
+    file.read(reinterpret_cast<char*>(buffer), 192);
+    if (file.gcount() != 192) {
+        file.close();
+        return false;
+    }
+    
+    for (int i = 0; i < 64; i++) {
+        uint8_t r = buffer[i * 3 + 0];
+        uint8_t g = buffer[i * 3 + 1];
+        uint8_t b = buffer[i * 3 + 2];
+        // Vulkan R8G8B8A8 expects Byte0 = Red
+        palScreen[i] = 0xFF000000 | (b << 16) | (g << 8) | r;
+    }
+    
+    file.close();
+    return true;
 }
 
 PPU::~PPU() { }

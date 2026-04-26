@@ -63,6 +63,7 @@ public:
     bool framebufferResized = false;
     int aspectRatioMode = 0; // 0 = Pixel Perfect (256:240), 1 = Standard TV (4:3)
     bool isFullScreen = false;
+    bool vSyncEnabled = true;
 
 private:
     const uint32_t TEX_WIDTH = 256;

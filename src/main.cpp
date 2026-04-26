@@ -108,6 +108,26 @@ int main(int argc, char* argv[]) {
         const char* keybindNames[8] = { "A", "B", "Select", "Start", "Up", "Down", "Left", "Right" };
         int awaiting_key_bind_index = -1;
 
+        std::string configFile = "config.ini";
+        std::ifstream inFile(configFile);
+        if (inFile.is_open()) {
+            for (int i = 0; i < 8; i++) {
+                std::string line;
+                if (std::getline(inFile, line)) {
+                    try {
+                        keybinds[i] = std::stoi(line);
+                    } catch (...) {}
+                }
+            }
+            inFile.close();
+        } else {
+            std::ofstream outFile(configFile);
+            if (outFile.is_open()) {
+                for (int i = 0; i < 8; i++) outFile << keybinds[i] << "\n";
+                outFile.close();
+            }
+        }
+
         const std::chrono::nanoseconds frame_duration(16639267);
         auto time_previous = std::chrono::high_resolution_clock::now();
 
@@ -120,6 +140,13 @@ int main(int argc, char* argv[]) {
                     if (glfwGetKey(renderer.window, k) == GLFW_PRESS) {
                         keybinds[awaiting_key_bind_index] = k;
                         awaiting_key_bind_index = -1;
+
+                        std::ofstream outFile(configFile);
+                        if (outFile.is_open()) {
+                            for (int i = 0; i < 8; i++) outFile << keybinds[i] << "\n";
+                            outFile.close();
+                        }
+                        
                         break;
                     }
                 }
@@ -215,6 +242,12 @@ int main(int argc, char* argv[]) {
             }
 
             if (ImGui::BeginPopupModal("Video Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("V-Sync (Performance):");
+                if (ImGui::Checkbox("Enable Standard V-Sync (adds ~16ms latency)", &renderer.vSyncEnabled)) {
+                    renderer.framebufferResized = true;
+                }
+                ImGui::Separator();
+                
                 ImGui::Text("Aspect Ratio:");
                 if (ImGui::RadioButton("Pixel Perfect (256:240)", &renderer.aspectRatioMode, 0)) {}
                 if (ImGui::RadioButton("Authentic NTSC (4:3)", &renderer.aspectRatioMode, 1)) {}

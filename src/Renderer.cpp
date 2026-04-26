@@ -1085,10 +1085,22 @@ VkSurfaceFormatKHR Renderer::chooseSwapSurfaceFormat(const std::vector<VkSurface
 }
 
 VkPresentModeKHR Renderer::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) return availablePresentMode;
+    if (!vSyncEnabled) {
+        // Find IMMEDIATE mode for zero V-Sync lag
+        for (const auto& availablePresentMode : availablePresentModes) {
+            if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) return availablePresentMode;
+        }
+        // If IMMEDIATE is unavailable, fallback to MAILBOX (also low latency, tears less)
+        for (const auto& availablePresentMode : availablePresentModes) {
+            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) return availablePresentMode;
+        }
+    } else {
+        // Standard V-Sync (avoids tearing, but buffers frames)
+        for (const auto& availablePresentMode : availablePresentModes) {
+            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) return availablePresentMode;
+        }
     }
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return VK_PRESENT_MODE_FIFO_KHR; // FIFO is guaranteed to be available
 }
 
 VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {

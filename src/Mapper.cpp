@@ -6,3 +6,7 @@ Mapper::Mapper(uint8_t prgBanks, uint8_t chrBanks) {
 }
 
 Mapper::~Mapper() { }
+
+MIRROR Mapper::mirror() {
+    return mirrormode;
+}

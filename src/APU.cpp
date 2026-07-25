@@ -7,7 +7,25 @@ APU::~APU() {}
 
 void APU::reset() {
     clock_counter = 0;
-    // Reset all internal channels, etc.
+
+    pulse1_duty = 0; pulse1_volume = 0; pulse1_timer = 0;
+    pulse1_length_counter = 0; pulse1_halt = false; pulse1_enabled = false;
+    pulse1_sequence = 0; pulse1_sample = 0.0;
+
+    pulse2_duty = 0; pulse2_volume = 0; pulse2_timer = 0;
+    pulse2_length_counter = 0; pulse2_halt = false; pulse2_enabled = false;
+    pulse2_sequence = 0; pulse2_sample = 0.0;
+
+    triangle_timer = 0; triangle_length_counter = 0;
+    triangle_linear_counter = 0; triangle_linear_counter_reload = 0;
+    triangle_linear_counter_reload_flag = false; triangle_halt = false;
+    triangle_enabled = false; triangle_sequence = 0; triangle_sample = 0.0;
+
+    noise_timer = 0; noise_length_counter = 0; noise_volume = 0;
+    noise_shift_register = 1; noise_halt = false; noise_enabled = false;
+    noise_mode = false; noise_sample = 0.0;
+
+    frame_counter_mode = 0; frame_sequence_step = 0;
 }
 
 uint8_t APU::cpuRead(uint16_t addr) {

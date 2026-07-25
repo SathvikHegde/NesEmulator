@@ -57,6 +57,12 @@ bool Mapper_001::cpuMapWrite(uint16_t addr, uint32_t &mapped_addr, uint8_t data)
                 
                 if (nTargetRegister == 0) { // Control
                     nControlRegister = nLoadRegister & 0x1F;
+                    switch (nControlRegister & 0x03) {
+                        case 0: mirrormode = ONESCREEN_LO; break;
+                        case 1: mirrormode = ONESCREEN_HI; break;
+                        case 2: mirrormode = VERTICAL; break;
+                        case 3: mirrormode = HORIZONTAL; break;
+                    }
                 } else if (nTargetRegister == 1) { // CHR Bank 0
                     if (nControlRegister & 0x10) {
                         nCHRBankSelect4Lo = nLoadRegister & 0x1F;

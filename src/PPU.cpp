@@ -104,8 +104,7 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data) {
             break;
         case 0x0004: // OAM Data
             pOAM[OAMADDR] = data;
-            // writing to OAM via $2004 normally increments the address 
-            // (technically only on correct scanlines/cycles but basic NES uses DMA anyway)
+            OAMADDR++;
             break;
         case 0x0005: // Scroll
             if (address_latch == 0) {
@@ -144,12 +143,23 @@ uint8_t PPU::ppuRead(uint16_t addr, bool rdonly) {
     } else if (addr >= 0x0000 && addr <= 0x1FFF) {
         data = tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF];
     } else if (addr >= 0x2000 && addr <= 0x3EFF) {
-        // Hardcode vertical mirroring for now
         addr &= 0x0FFF;
-        if (addr >= 0x0000 && addr <= 0x03FF) data = tblName[0][addr & 0x03FF];
-        else if (addr >= 0x0400 && addr <= 0x07FF) data = tblName[1][addr & 0x03FF];
-        else if (addr >= 0x0800 && addr <= 0x0BFF) data = tblName[0][addr & 0x03FF];
-        else if (addr >= 0x0C00 && addr <= 0x0FFF) data = tblName[1][addr & 0x03FF];
+        MIRROR m = cart->Mirror();
+        if (m == VERTICAL) {
+            if (addr <= 0x03FF) data = tblName[0][addr & 0x03FF];
+            else if (addr <= 0x07FF) data = tblName[1][addr & 0x03FF];
+            else if (addr <= 0x0BFF) data = tblName[0][addr & 0x03FF];
+            else data = tblName[1][addr & 0x03FF];
+        } else if (m == HORIZONTAL) {
+            if (addr <= 0x03FF) data = tblName[0][addr & 0x03FF];
+            else if (addr <= 0x07FF) data = tblName[0][addr & 0x03FF];
+            else if (addr <= 0x0BFF) data = tblName[1][addr & 0x03FF];
+            else data = tblName[1][addr & 0x03FF];
+        } else if (m == ONESCREEN_LO) {
+            data = tblName[0][addr & 0x03FF];
+        } else if (m == ONESCREEN_HI) {
+            data = tblName[1][addr & 0x03FF];
+        }
     } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         addr &= 0x001F;
         if (addr == 0x0010) addr = 0x0000;
@@ -171,10 +181,22 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data) {
         tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
     } else if (addr >= 0x2000 && addr <= 0x3EFF) {
         addr &= 0x0FFF;
-        if (addr >= 0x0000 && addr <= 0x03FF) tblName[0][addr & 0x03FF] = data;
-        else if (addr >= 0x0400 && addr <= 0x07FF) tblName[1][addr & 0x03FF] = data;
-        else if (addr >= 0x0800 && addr <= 0x0BFF) tblName[0][addr & 0x03FF] = data;
-        else if (addr >= 0x0C00 && addr <= 0x0FFF) tblName[1][addr & 0x03FF] = data;
+        MIRROR m = cart->Mirror();
+        if (m == VERTICAL) {
+            if (addr <= 0x03FF) tblName[0][addr & 0x03FF] = data;
+            else if (addr <= 0x07FF) tblName[1][addr & 0x03FF] = data;
+            else if (addr <= 0x0BFF) tblName[0][addr & 0x03FF] = data;
+            else tblName[1][addr & 0x03FF] = data;
+        } else if (m == HORIZONTAL) {
+            if (addr <= 0x03FF) tblName[0][addr & 0x03FF] = data;
+            else if (addr <= 0x07FF) tblName[0][addr & 0x03FF] = data;
+            else if (addr <= 0x0BFF) tblName[1][addr & 0x03FF] = data;
+            else tblName[1][addr & 0x03FF] = data;
+        } else if (m == ONESCREEN_LO) {
+            tblName[0][addr & 0x03FF] = data;
+        } else if (m == ONESCREEN_HI) {
+            tblName[1][addr & 0x03FF] = data;
+        }
     } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         addr &= 0x001F;
         if (addr == 0x0010) addr = 0x0000;

@@ -1,6 +1,14 @@
 #pragma once
 #include <cstdint>
 
+enum MIRROR {
+    HORIZONTAL,
+    VERTICAL,
+    ONESCREEN_LO,
+    ONESCREEN_HI,
+    HARDWARE
+};
+
 class Mapper {
 public:
     Mapper(uint8_t prgBanks, uint8_t chrBanks);
@@ -14,7 +22,10 @@ public:
     virtual bool ppuMapRead(uint16_t addr, uint32_t &mapped_addr) = 0;
     virtual bool ppuMapWrite(uint16_t addr, uint32_t &mapped_addr) = 0;
 
+    virtual MIRROR mirror();
+
 protected:
+    MIRROR mirrormode = HARDWARE;
     uint8_t nPRGBanks = 0;
     uint8_t nCHRBanks = 0;
 };

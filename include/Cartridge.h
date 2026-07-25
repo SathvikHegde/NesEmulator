@@ -20,6 +20,8 @@ public:
     bool ppuRead(uint16_t addr, uint8_t &data);
     bool ppuWrite(uint16_t addr, uint8_t data);
 
+    MIRROR Mirror();
+
 private:
     bool bImageValid = false;
 
@@ -31,4 +33,6 @@ private:
     std::vector<uint8_t> vCHRMemory;
 
     std::shared_ptr<Mapper> pMapper;
+    std::vector<uint8_t> vPRGRAM;
+    MIRROR hw_mirror = VERTICAL;
 };

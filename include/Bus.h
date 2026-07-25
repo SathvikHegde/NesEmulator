@@ -35,7 +35,7 @@ public:
     void clock();
 
     // Controllers
-    uint8_t controller[2];
+    uint8_t controller[2] = {0, 0};
 
 private:
     uint8_t controller_state[2];

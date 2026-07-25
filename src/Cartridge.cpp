@@ -34,6 +34,7 @@ Cartridge::Cartridge(const std::string& sFileName) {
     if (header.mapper1 & 0x04) ifs.seekg(512, std::ios_base::cur); // Skip Trainer
 
     nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
+    hw_mirror = (header.mapper1 & 0x01) ? VERTICAL : HORIZONTAL;
     
     // File type 1 parsing
     nPRGBanks = header.prg_rom_chunks;
@@ -42,13 +43,13 @@ Cartridge::Cartridge(const std::string& sFileName) {
 
     nCHRBanks = header.chr_rom_chunks;
     if (nCHRBanks == 0) {
-        // Create CHR RAM
+        // Create CHR RAM (no data in ROM file to read)
         vCHRMemory.resize(8192);
     } else {
-        // Allocate for CHR ROM
+        // Allocate for CHR ROM and read from file
         vCHRMemory.resize(nCHRBanks * 8192);
+        ifs.read((char*)vCHRMemory.data(), vCHRMemory.size());
     }
-    ifs.read((char*)vCHRMemory.data(), vCHRMemory.size());
 
     ifs.close();
 
@@ -61,6 +62,7 @@ Cartridge::Cartridge(const std::string& sFileName) {
         default: std::cerr << "Cartridge: Mapper " << (int)nMapperID << " not supported! Don't complain to me." << std::endl; return;
     }
 
+    vPRGRAM.resize(8192, 0x00);
     bImageValid = true;
 }
 
@@ -72,10 +74,8 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t &data) {
     uint32_t mapped_addr = 0;
     if (pMapper->cpuMapRead(addr, mapped_addr)) {
         if (mapped_addr == 0xFFFFFFFF) {
-            // Read from RAM. 
-            // DO NOT TOUCH THIS. I don't know why this static RAM ignore is here, 
-            // but if you remove it, Zelda deletes your operating system. Just leave it. It's load-bearing now.
-            data = 0x00; // Static RAM ignoring for this phase (Zelda/etc usually use it). 
+            // PRG RAM read ($6000-$7FFF)
+            data = vPRGRAM[addr & 0x1FFF];
             return true;
         }
         data = vPRGMemory[mapped_addr];
@@ -88,7 +88,8 @@ bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
     uint32_t mapped_addr = 0;
     if (pMapper->cpuMapWrite(addr, mapped_addr, data)) {
         if (mapped_addr == 0xFFFFFFFF) {
-            // PRG RAM write
+            // PRG RAM write ($6000-$7FFF)
+            vPRGRAM[addr & 0x1FFF] = data;
             return true;
         }
         vPRGMemory[mapped_addr] = data; // Usually PRG is ROM, but written for completeness or RAM mappers
@@ -113,4 +114,9 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
         return true;
     }
     return false;
+}
+
+MIRROR Cartridge::Mirror() {
+    MIRROR m = pMapper->mirror();
+    return (m == HARDWARE) ? hw_mirror : m;
 }

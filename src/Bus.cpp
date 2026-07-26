@@ -5,6 +5,10 @@
 Bus::Bus() {
     ram.fill(0x00);
     cpu.ConnectBus(this);
+    // DMC needs to read from CPU address space for sample playback
+    apu.dmcRead = [this](uint16_t addr) -> uint8_t {
+        return this->read(addr, false);
+    };
 }
 
 Bus::~Bus() {}
@@ -58,7 +62,11 @@ void Bus::insertCartridge(const std::shared_ptr<Cartridge>& cartridge) {
 
 void Bus::reset() {
     cpu.reset();
+    apu.reset();
     nSystemClockCounter = 0;
+    audio_sample_counter = 0;
+    audio_write_pos.store(0);
+    audio_read_pos.store(0);
     
     dma_page = 0x00;
     dma_addr = 0x00;
@@ -94,6 +102,9 @@ void Bus::clock() {
         } else {
             cpu.clock();
         }
+
+        // APU clocks every CPU cycle (internal divider handles CPU/2 for timers)
+        apu.clock();
     }
 
     if (ppu.nmi) {
@@ -101,22 +112,17 @@ void Bus::clock() {
         cpu.nmi();
     }
 
-    // Standard APU execution clock is tied functionally to CPU cycle / 2.
-    if (nSystemClockCounter % 6 == 0) {
-        apu.clock();
-    }
-
-    // Audio Synchronization
-    bool bAudioSampleReady = false;
-    audio_time += (1.0 / 5369318.0); // Exact generic master clock speed
-    if (audio_time >= (1.0 / 44100.0)) {
-        audio_time -= (1.0 / 44100.0);
-        bAudioSampleReady = true;
-    }
-
-    if (bAudioSampleReady) {
-        std::lock_guard<std::mutex> lock(audio_mutex);
-        audio_samples.push(apu.GetOutputSample());
+    // Audio sample generation (integer counter — zero drift)
+    audio_sample_counter += 44100;
+    if (audio_sample_counter >= 5369318) {
+        audio_sample_counter -= 5369318;
+        double sample = apu.GetOutputSample();
+        int wp = audio_write_pos.load(std::memory_order_relaxed);
+        int next = (wp + 1) % AUDIO_BUFFER_SIZE;
+        if (next != audio_read_pos.load(std::memory_order_acquire)) {
+            audio_buffer[wp] = sample;
+            audio_write_pos.store(next, std::memory_order_release);
+        }
     }
 
     nSystemClockCounter++;

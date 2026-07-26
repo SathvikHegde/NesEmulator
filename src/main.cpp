@@ -7,8 +7,6 @@
 #include <memory>
 #include <chrono>
 #include <thread>
-#include <mutex>
-#include <queue>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -18,18 +16,18 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
-// Hardware Audio Callback
+// Hardware Audio Callback (lock-free ring buffer consumer)
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     Bus* nes = (Bus*)pDevice->pUserData;
     float* pOutputF32 = (float*)pOutput;
     
-    std::lock_guard<std::mutex> lock(nes->audio_mutex);
     for (ma_uint32 i = 0; i < frameCount; ++i) {
-        if (!nes->audio_samples.empty()) {
-            double sample = nes->audio_samples.front();
-            nes->audio_samples.pop();
-            pOutputF32[i * 2 + 0] = (float)sample; // Stereo Left
-            pOutputF32[i * 2 + 1] = (float)sample; // Stereo Right
+        int rp = nes->audio_read_pos.load(std::memory_order_relaxed);
+        if (rp != nes->audio_write_pos.load(std::memory_order_acquire)) {
+            float sample = (float)nes->audio_buffer[rp];
+            nes->audio_read_pos.store((rp + 1) % Bus::AUDIO_BUFFER_SIZE, std::memory_order_release);
+            pOutputF32[i * 2 + 0] = sample; // Stereo Left
+            pOutputF32[i * 2 + 1] = sample; // Stereo Right
         } else {
             pOutputF32[i * 2 + 0] = 0.0f;
             pOutputF32[i * 2 + 1] = 0.0f;

@@ -3,8 +3,7 @@
 #include <array>
 #include <string>
 #include <memory>
-#include <mutex>
-#include <queue>
+#include <atomic>
 #include "PPU.h"
 #include "CPU.h"
 #include "APU.h"
@@ -19,9 +18,11 @@ public:
     CPU cpu;
     APU apu;
 
-    double audio_time = 0.0;
-    std::mutex audio_mutex;
-    std::queue<double> audio_samples;
+    static const int AUDIO_BUFFER_SIZE = 8192;
+    double audio_buffer[AUDIO_BUFFER_SIZE] = {0};
+    std::atomic<int> audio_write_pos{0};
+    std::atomic<int> audio_read_pos{0};
+    uint32_t audio_sample_counter = 0;
 
     // Bus Read & Write
     void write(uint16_t addr, uint8_t data);

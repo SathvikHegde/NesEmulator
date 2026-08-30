@@ -1,4 +1,4 @@
-#This shit is entirely vibe coded!!
+# This shit is entirely vibe coded!!
 
 # NesEmulator
 

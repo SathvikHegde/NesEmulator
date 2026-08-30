@@ -1,3 +1,5 @@
+#This shit is entirely vibe coded!!
+
 # NesEmulator
 
 Welcome to my descent into madness. This is a cycle-accurate, multi-threaded classic Nintendo Entertainment System (NES) emulator. I built this from scratch in modern C++ because I hate myself and I evidently thought dragging raw graphics layers directly into the unholy depths of `Vulkan` would be a fun weekend project. It wasn't.
